@@ -1,68 +1,155 @@
-#include <WiFi.h>
-#include <ESPmDNS.h>
-#include <WiFiUdp.h>
-#include <ArduinoOTA.h>
 
-const char* ssid = "..........";
-const char* password = "..........";
+const int PulsePin = 21;
 
-void setup() {
-  Serial.begin(115200);
-  Serial.println("Booting");
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  while (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    Serial.println("Connection Failed! Rebooting...");
-    delay(5000);
-    ESP.restart();
-  }
+const int dirPin = 19 ;
+const int enaPin = 18;
+const int BlockLeft  = 23; 
+const int BlockRight = 22; 
+char Orientation = 'S';
+int  IsLeft=0;
+int  IsRight=0;
+int incomingByte = 0; 
+int PulsePerCycle=1000;
+int iteration = 22600;
 
-  // Port defaults to 3232
-  // ArduinoOTA.setPort(3232);
 
-  // Hostname defaults to esp3232-[MAC]
-  // ArduinoOTA.setHostname("myesp32");
+int setOrientationViaSerialMessage(){
+    if (Serial.available() > 0) {  
+        incomingByte = Serial.read();
+        if ((char)incomingByte == 'L') {
+            Orientation = 'L';
+            digitalWrite(dirPin, LOW);
+            Serial.println("I received: L");
+            Serial.println("Turning Left");
+            return -1; 
+        }
+        if ((char)incomingByte == 'R') {
+            Orientation = 'R';
+            digitalWrite(dirPin, HIGH);
+            Serial.println("I received: R");
+            Serial.println("Turning Right");
+            return 1; 
+        }
+        if ((char)incomingByte == '+') {
+            Serial.println("I received: +");
+            Serial.println("increase iteration + 10");
+            iteration=iteration+10;
+             Serial.println(iteration);
+            return 0; 
+        }
+         
+        if ((char)incomingByte == '-') {
+            Serial.println("I received: -");
+            Serial.println("decrease iteration -10");
+            iteration=iteration-10;
+             Serial.println(iteration);
+            return 0; 
+        }
+    }
+    return 0;
+}
+void EnaMotor() {
+    digitalWrite(enaPin, LOW);
+    delayMicroseconds(500000);
+}
+void DisaMotor() {
+   delayMicroseconds(1000000);
+   digitalWrite(enaPin, HIGH);
+}
+void StopMotor() {
+   DisaMotor();
+   Orientation='S';
+   Serial.println("Stop Motor");
 
-  // No authentication by default
-  // ArduinoOTA.setPassword("admin");
+}
+void StepMotor() {
+    Serial.print(" Orientation = ");
+    Serial.println(Orientation);
+    Serial.print(" IsLeft = ");
+    Serial.println(IsLeft);
+    Serial.print(" IsRight = ");
+    Serial.println(IsRight);
 
-  // Password can be set with it's md5 value as well
-  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
-  // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
-
-  ArduinoOTA
-    .onStart([]() {
-      String type;
-      if (ArduinoOTA.getCommand() == U_FLASH)
-        type = "sketch";
-      else // U_SPIFFS
-        type = "filesystem";
-
-      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-      Serial.println("Start updating " + type);
-    })
-    .onEnd([]() {
-      Serial.println("\nEnd");
-    })
-    .onProgress([](unsigned int progress, unsigned int total) {
-      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-    })
-    .onError([](ota_error_t error) {
-      Serial.printf("Error[%u]: ", error);
-      if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-      else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-      else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-      else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-      else if (error == OTA_END_ERROR) Serial.println("End Failed");
-    });
-
-  ArduinoOTA.begin();
-
-  Serial.println("Ready");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
+    EnaMotor();
+   double waittime = 300.0; 
+   double waittime2 = 150.0 ;
+   double waittime3 = 75.0; 
+   iteration = 22400;
+   double increment=(waittime-waittime3)/(iteration/2);
+   for (int i = 0; i <= iteration; i++) { 
+       waittime=waittime-increment;
+       if (waittime<75) {
+             waittime=75;
+       }
+       digitalWrite(PulsePin, HIGH);
+       delayMicroseconds(int(waittime));
+       digitalWrite(PulsePin, LOW);
+       delayMicroseconds(waittime);
+       IsLeft=    digitalRead(BlockLeft);
+       IsRight=   digitalRead(BlockRight);
+ 
+       
+       if ((Orientation=='L' and IsLeft == HIGH) or 
+           (Orientation=='R' and IsRight == HIGH)) {
+    Serial.print(" Stop Early");
+    Serial.print(" Orientation = ");
+    Serial.println(Orientation);
+    Serial.print(" IsLeft = ");
+    Serial.println(IsLeft);
+    Serial.print(" IsRight = ");
+    Serial.println(IsRight);
+    i=iteration;
+    }
+   }
+  StopMotor();
 }
 
-void loop() {
-  ArduinoOTA.handle();
+
+void setup()
+{
+    // Declare Serial baud
+    Serial.begin(9600);
+    
+    // Declare pins as Outputs
+    pinMode(PulsePin, OUTPUT);
+    pinMode(dirPin,  OUTPUT);
+    pinMode(enaPin,  OUTPUT);
+
+
+    // Declare pins as Inputs
+    pinMode(BlockLeft,  INPUT);
+    pinMode(BlockRight, INPUT);
+
+}
+
+
+void loop()
+{
+    setOrientationViaSerialMessage();
+    IsLeft=    digitalRead(BlockLeft);
+    IsRight=   digitalRead(BlockRight);
+    
+
+
+    if ((Orientation=='L' and IsLeft != HIGH) or 
+        (Orientation=='R' and IsRight != HIGH)) {
+        Serial.println("calling StepMotor ()" );
+            Serial.print(" IsLeft = ");
+        Serial.println(IsLeft);
+        Serial.print(" IsRight = ");
+        Serial.println(IsRight);
+        StepMotor();
+    }
+    if (Orientation=='E') {
+        EnaMotor();
+    }
+    if (Orientation =='L' or Orientation =='R' or Orientation =='E'){ 
+      StopMotor();
+    }
+    
+    
+//    if ((Orientation=='L' and IsLeft != HIGH) or 
+//        (Orientation=='R' and IsRight != HIGH)) {
+//       StepMotor();
+//    }
 }
