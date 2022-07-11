@@ -10,7 +10,6 @@ int  IsLeft=0;
 int  IsRight=0;
 int incomingByte = 0; 
 int PulsePerCycle=1000;
-int iteration = 22600;
 
 
 int setOrientationViaSerialMessage(){
@@ -21,7 +20,7 @@ int setOrientationViaSerialMessage(){
             digitalWrite(dirPin, LOW);
             Serial.println("I received: L");
             Serial.println("Turning Left");
-            return -1; 
+            return 1; 
         }
         if ((char)incomingByte == 'R') {
             Orientation = 'R';
@@ -30,20 +29,17 @@ int setOrientationViaSerialMessage(){
             Serial.println("Turning Right");
             return 1; 
         }
-        if ((char)incomingByte == '+') {
-            Serial.println("I received: +");
-            Serial.println("increase iteration + 10");
-            iteration=iteration+10;
-             Serial.println(iteration);
-            return 0; 
+        if ((char)incomingByte == 'E') {
+            Orientation = 'E';
+            Serial.println("I received: E");
+            Serial.println("Enabling Motor");
+            return 1; 
         }
-         
-        if ((char)incomingByte == '-') {
-            Serial.println("I received: -");
-            Serial.println("decrease iteration -10");
-            iteration=iteration-10;
-             Serial.println(iteration);
-            return 0; 
+        if ((char)incomingByte == 'D') {
+            Orientation = 'D';
+            Serial.println("I received: D");
+            Serial.println("Disabling Motor");
+            return 1; 
         }
     }
     return 0;
@@ -51,13 +47,17 @@ int setOrientationViaSerialMessage(){
 void EnaMotor() {
     digitalWrite(enaPin, LOW);
     delayMicroseconds(500000);
+    Serial.println("Enabled");
+   Orientation='S';
 }
 void DisaMotor() {
    delayMicroseconds(1000000);
    digitalWrite(enaPin, HIGH);
+   Serial.println("Disabled");
+   Orientation='S';
 }
 void StopMotor() {
-   DisaMotor();
+   digitalWrite(enaPin, HIGH);
    Orientation='S';
    Serial.println("Stop Motor");
 
@@ -70,21 +70,32 @@ void StepMotor() {
     Serial.print(" IsRight = ");
     Serial.println(IsRight);
 
-    EnaMotor();
-   double waittime = 300.0; 
-   double waittime2 = 150.0 ;
-   double waittime3 = 75.0; 
-   iteration = 22400;
-   double increment=(waittime-waittime3)/(iteration/2);
-   for (int i = 0; i <= iteration; i++) { 
-       waittime=waittime-increment;
-       if (waittime<75) {
-             waittime=75;
+    digitalWrite(enaPin, LOW);
+    delayMicroseconds(500000);
+   double FinalWaitingTime = 75.0; 
+   double StartWaitingTime = 250.0; 
+   double CurrentWaitingTime = StartWaitingTime;
+   
+   double iteration = 22400.0;
+
+   double incrementdouble=(iteration/2)/(StartWaitingTime-FinalWaitingTime);
+   int increment=incrementdouble;
+   Serial.print(" Current");
+   Serial.print(CurrentWaitingTime);
+   Serial.print(" increment");
+   Serial.print(increment);
+
+   for (int i = 1; i <= iteration + 1; i++) { 
+       if ((i % increment) == 0) {
+            CurrentWaitingTime=CurrentWaitingTime-1;
+       }
+       if (CurrentWaitingTime<FinalWaitingTime) {
+             CurrentWaitingTime=FinalWaitingTime;
        }
        digitalWrite(PulsePin, HIGH);
-       delayMicroseconds(int(waittime));
+       delayMicroseconds(CurrentWaitingTime);
        digitalWrite(PulsePin, LOW);
-       delayMicroseconds(waittime);
+       delayMicroseconds(CurrentWaitingTime);
        IsLeft=    digitalRead(BlockLeft);
        IsRight=   digitalRead(BlockRight);
  
@@ -101,7 +112,9 @@ void StepMotor() {
     i=iteration;
     }
    }
-  StopMotor();
+   Serial.print(" Current");
+   Serial.print(CurrentWaitingTime);
+   StopMotor();
 }
 
 
@@ -134,7 +147,7 @@ void loop()
     if ((Orientation=='L' and IsLeft != HIGH) or 
         (Orientation=='R' and IsRight != HIGH)) {
         Serial.println("calling StepMotor ()" );
-            Serial.print(" IsLeft = ");
+        Serial.print(" IsLeft = ");
         Serial.println(IsLeft);
         Serial.print(" IsRight = ");
         Serial.println(IsRight);
@@ -143,9 +156,12 @@ void loop()
     if (Orientation=='E') {
         EnaMotor();
     }
-    if (Orientation =='L' or Orientation =='R' or Orientation =='E'){ 
-      StopMotor();
+    if (Orientation=='D') {
+        DisaMotor();
     }
+    //if (Orientation =='L' or Orientation =='R' or Orientation =='E'){ 
+    ////  StopMotor();
+    //}
     
     
 //    if ((Orientation=='L' and IsLeft != HIGH) or 
