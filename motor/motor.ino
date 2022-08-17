@@ -1,15 +1,15 @@
 
-const int PulsePin = 21;
+const int PulsePin = 27;
 
-const int dirPin = 19 ;
-const int enaPin = 18;
-const int BlockLeft  = 23; 
-const int BlockRight = 22; 
+const int dirPin = 33 ;
+const int enaPin = 15;
+const int BlockLeft  = 13; 
+const int BlockRight = 12; 
 char Orientation = 'S';
 int  IsLeft=0;
 int  IsRight=0;
-int incomingByte = 0; 
-int PulsePerCycle=1000;
+int  incomingByte = 0; 
+int  PulsePerCycle=1000;
 
 
 int setOrientationViaSerialMessage(){
@@ -48,19 +48,18 @@ void EnaMotor() {
     digitalWrite(enaPin, LOW);
     delayMicroseconds(500000);
     Serial.println("Enabled");
-   Orientation='S';
+    Orientation='S';
 }
 void DisaMotor() {
-   delayMicroseconds(1000000);
-   digitalWrite(enaPin, HIGH);
-   Serial.println("Disabled");
-   Orientation='S';
+    delayMicroseconds(1000000);
+    digitalWrite(enaPin, HIGH);
+    Serial.println("Disabled");
+    Orientation='S';
 }
 void StopMotor() {
-   digitalWrite(enaPin, HIGH);
-   Orientation='S';
-   Serial.println("Stop Motor");
-
+    digitalWrite(enaPin, HIGH);
+    Orientation='S';
+    Serial.println("Stop Motor");
 }
 void StepMotor() {
     Serial.print(" Orientation = ");
@@ -72,49 +71,75 @@ void StepMotor() {
 
     digitalWrite(enaPin, LOW);
     delayMicroseconds(500000);
-   double FinalWaitingTime = 75.0; 
-   double StartWaitingTime = 250.0; 
-   double CurrentWaitingTime = StartWaitingTime;
+    double FinalWaitingTime = 75.0; 
+    double StartWaitingTime = 250.0; 
+    double CurrentWaitingTime = StartWaitingTime;
    
-   double iteration = 22400.0;
+    double iteration = 22000.0;
+    double iteration2=   400.0;
 
-   double incrementdouble=(iteration/2)/(StartWaitingTime-FinalWaitingTime);
-   int increment=incrementdouble;
-   Serial.print(" Current");
-   Serial.print(CurrentWaitingTime);
-   Serial.print(" increment");
-   Serial.print(increment);
 
-   for (int i = 1; i <= iteration + 1; i++) { 
-       if ((i % increment) == 0) {
-            CurrentWaitingTime=CurrentWaitingTime-1;
-       }
-       if (CurrentWaitingTime<FinalWaitingTime) {
+    double incrementdouble=(iteration/2)/(StartWaitingTime-FinalWaitingTime);
+    int increment=incrementdouble;
+    Serial.print(" Current");
+    Serial.print(CurrentWaitingTime);
+    Serial.print(" increment");
+    Serial.print(increment);
+
+    // loop increasing speed up to "iteration"
+    
+    for (int i = 1; i <= iteration + 1; i++) { 
+        if ((i % increment) == 0) {
+             CurrentWaitingTime=CurrentWaitingTime-1;
+        }
+        if (CurrentWaitingTime<FinalWaitingTime) {
              CurrentWaitingTime=FinalWaitingTime;
-       }
-       digitalWrite(PulsePin, HIGH);
-       delayMicroseconds(CurrentWaitingTime);
-       digitalWrite(PulsePin, LOW);
-       delayMicroseconds(CurrentWaitingTime);
-       IsLeft=    digitalRead(BlockLeft);
-       IsRight=   digitalRead(BlockRight);
+        }
+        digitalWrite(PulsePin, HIGH);
+        delayMicroseconds(CurrentWaitingTime);
+        digitalWrite(PulsePin, LOW);
+        delayMicroseconds(CurrentWaitingTime);
+        IsLeft=    digitalRead(BlockLeft);
+        IsRight=   digitalRead(BlockRight);
  
-       
-       if ((Orientation=='L' and IsLeft == HIGH) or 
+        if ((Orientation=='L' and IsLeft == HIGH) or 
            (Orientation=='R' and IsRight == HIGH)) {
-    Serial.print(" Stop Early");
+             Serial.print(" Stop Early");
+             Serial.print(" steps = ");
+             Serial.println(i);
+             break;
+         }
+    }
+    
+    // loop at slow speed up to "iteration2" to reach end of course
+
+    for (int i = 1; i <= iteration2 + 1; i++) { 
+        digitalWrite(PulsePin, HIGH);
+        delayMicroseconds(StartWaitingTime);
+        digitalWrite(PulsePin, LOW);
+        delayMicroseconds(StartWaitingTime);
+        IsLeft=    digitalRead(BlockLeft);
+        IsRight=   digitalRead(BlockRight);
+       
+        if ((Orientation=='L' and IsLeft == HIGH) or 
+           (Orientation=='R' and IsRight == HIGH)) {
+             Serial.print(" Stop Rotation");
+             Serial.print(" steps = ");
+             Serial.print(iteration);
+             Serial.print(" + ");
+             Serial.println(i);
+             break;
+         }
+    }
     Serial.print(" Orientation = ");
     Serial.println(Orientation);
     Serial.print(" IsLeft = ");
     Serial.println(IsLeft);
     Serial.print(" IsRight = ");
     Serial.println(IsRight);
-    i=iteration;
-    }
-   }
-   Serial.print(" Current");
-   Serial.print(CurrentWaitingTime);
-   StopMotor();
+    Serial.print(" Current");
+    Serial.print(CurrentWaitingTime);
+    StopMotor();
 }
 
 
