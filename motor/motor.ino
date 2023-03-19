@@ -103,14 +103,42 @@ void StepMotor() {
     Serial.print(" increment");
     Serial.print(increment);
 
+    int phase1 = int(interation_phase1_increasing_speed/2);
+    int phase2 = interation_phase1_increasing_speed-phase1;
+
     // loop increasing speed up to "interation_phase1_increasing_speed"
     
-    for (int i = 1; i <= interation_phase1_increasing_speed + 1; i++) { 
+    for (int i = 1; i <= phase1 + 1; i++) { 
         if ((i % increment) == 0) {
              CurentSleepingTime=CurentSleepingTime-1;
         }
         if (CurentSleepingTime<SleepingTimeCruise) {
              CurentSleepingTime=SleepingTimeCruise;
+        }
+
+        IsLeft=    digitalRead(BlockLeft);
+        IsRight=   digitalRead(BlockRight);
+ 
+        if ((Orientation=='L' and IsLeft == HIGH) or 
+           (Orientation=='R' and IsRight == HIGH)) {
+             Serial.print(" Stop Early in Phase 1");
+             Serial.print(" steps = ");
+             Serial.println(i);
+             break;
+         } else {
+             digitalWrite(PulsePin, HIGH);
+             delayMicroseconds(CurentSleepingTime);
+             digitalWrite(PulsePin, LOW);
+             delayMicroseconds(CurentSleepingTime);
+         }
+    } 
+
+    for (int i = 1; i <= phase2; i++) { 
+        if ((i % increment) == 0) {
+             CurentSleepingTime=CurentSleepingTime+1;
+        }
+        if (CurentSleepingTime>SleepingTimeInitial) {
+             CurentSleepingTime=SleepingTimeInitial;
         }
 
         IsLeft=    digitalRead(BlockLeft);
