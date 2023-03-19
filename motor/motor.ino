@@ -13,8 +13,8 @@ int  incomingByte = 0;
 int  PulsePerCycle=1000;
 
 // Number of iteration (steps) 
-double interation_phase1_increasing_speed = 22000.0;  // phase 1
-double interation_phase2_slow_motion      =   400.0;  // phase 2
+double interation_phase1_increasing_speed = 21000.0;  // phase 1
+double interation_phase2_slow_motion      =   660.0;  // phase 2
 
 // sleeptime between motor pulse smaller means faster.
  
@@ -72,6 +72,12 @@ void DisaMotor() {
 
 void StopMotor() {
     digitalWrite(enaPin, HIGH);
+    Orientation='S';
+    Serial.println("Stop Motor");
+}
+
+void EndMotor() {
+    //digitalWrite(enaPin, HIGH);
     Orientation='S';
     Serial.println("Stop Motor");
 }
@@ -157,7 +163,7 @@ void StepMotor() {
     Serial.println(IsRight);
     Serial.print(" Current");
     Serial.print(CurentSleepingTime);
-    StopMotor();
+    EndMotor();
 }
 
 
