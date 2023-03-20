@@ -1,10 +1,10 @@
-
+// Pinout
 const int PulsePin = 27;
 const int dirPin = 33 ;
 const int enaPin = 15;
-
 const int BlockLeft  = 13; 
 const int BlockRight = 12; 
+
 
 char Orientation = 'S';
 int  IsLeft=0;
@@ -12,18 +12,21 @@ int  IsRight=0;
 int  incomingByte = 0; 
 int  PulsePerCycle=1000;
 
-// Number of iteration (steps) 
-double interation_phase1_increasing_speed = 21000.0;  // phase 1
-double interation_phase2_slow_motion      =   660.0;  // phase 2
+// number of motor steps for each phase
+double nb_steps_phase1 = 21000.0;  // phase 1
+double nb_steps_phase2 =   660.0;  // phase 2
 
-// sleeptime between motor pulse smaller means faster.
- 
-double SleepingTimeCruise = 75.0; 
-double SleepingTimeInitial = 250.0; 
+// waiting time defines the min and max speed
+double waiting_time_max_speed = 75.0; 
+double waiting_time_min_speed = 250.0; 
 
+int tick_size_phase1 = int((nb_steps_phase1/2)/(waiting_time_min_speed-waiting_time_max_speed));
+int tick_size_phase2 = int((nb_steps_phase2/2)/waiting_time_min_speed);
+
+int increment_phase2 = tick_size_phase2;
 
 int setOrientationViaSerialMessage(){
-  
+
     if (Serial.available() > 0) {  
         incomingByte = Serial.read();
         if ((char)incomingByte == 'L') {
@@ -93,27 +96,53 @@ void StepMotor() {
     digitalWrite(enaPin, LOW);
     delayMicroseconds(500000);
 
-    double CurentSleepingTime = SleepingTimeInitial;
+    double CurentSleepingTime = waiting_time_min_speed;
    
-    double incrementdouble = (interation_phase1_increasing_speed/2)/(SleepingTimeInitial-SleepingTimeCruise);
-    int increment = incrementdouble;
     
     Serial.print(" Current");
     Serial.print(CurentSleepingTime);
-    Serial.print(" increment");
-    Serial.print(increment);
+    Serial.print(" tick_size_phase1");
+    Serial.print(tick_size_phase1);
 
-    int phase1 = int(interation_phase1_increasing_speed/2);
-    int phase2 = interation_phase1_increasing_speed-phase1;
-
-    // loop increasing speed up to "interation_phase1_increasing_speed"
+    // loop increasing speed up to "waiting_time_max_speed"
     
-    for (int i = 1; i <= phase1 + 1; i++) { 
-        if ((i % increment) == 0) {
+    for (int i = 1; i <= nb_steps_phase1 + 1; i++)  { 
+        if ((i % tick_size_phase1) == 0) {
+             //at Every tick, decrease the sleeptime
              CurentSleepingTime=CurentSleepingTime-1;
         }
-        if (CurentSleepingTime<SleepingTimeCruise) {
-             CurentSleepingTime=SleepingTimeCruise;
+        if (CurentSleepingTime<waiting_time_max_speed) {
+             // cap the speed
+             CurentSleepingTime=waiting_time_max_speed;
+        }
+
+        IsLeft=    digitalRead(BlockLeft);
+        IsRight=   digitalRead(BlockRight);
+ 
+        if ((Orientation=='L' and IsLeft == HIGH) or 
+           (Orientation=='R' and IsRight == HIGH)) {
+             Serial.print(" Stop Early in Phase 1");
+             Serial.print(" steps = ");
+             Serial.println(i);
+             break;
+         } else {
+             digitalWrite(PulsePin, HIGH);
+             delayMicroseconds(CurentSleepingTime);
+             digitalWrite(PulsePin, LOW);
+             delayMicroseconds(CurentSleepingTime);
+         }
+    }
+
+    // loop decrease speed up to "waiting_time_mainspeed"
+    // loop at slow speed up to "nb_steps_phase2" to reach end of course
+
+    for (int i = 1; i <= nb_steps_phase2 + 1; i++) { 
+        if ((i % tick_size_phase2) == 0) {
+             //at Every tick, increase the sleeptime
+             CurentSleepingTime=CurentSleepingTime-1;
+        }
+        if (CurentSleepingTime>waiting_time_min_speed) {
+             CurentSleepingTime=waiting_time_min_speed;
         }
 
         IsLeft=    digitalRead(BlockLeft);
@@ -133,56 +162,6 @@ void StepMotor() {
          }
     } 
 
-    for (int i = 1; i <= phase2; i++) { 
-        if ((i % increment) == 0) {
-             CurentSleepingTime=CurentSleepingTime+1;
-        }
-        if (CurentSleepingTime>SleepingTimeInitial) {
-             CurentSleepingTime=SleepingTimeInitial;
-        }
-
-        IsLeft=    digitalRead(BlockLeft);
-        IsRight=   digitalRead(BlockRight);
- 
-        if ((Orientation=='L' and IsLeft == HIGH) or 
-           (Orientation=='R' and IsRight == HIGH)) {
-             Serial.print(" Stop Early in Phase 1");
-             Serial.print(" steps = ");
-             Serial.println(i);
-             break;
-         } else {
-             digitalWrite(PulsePin, HIGH);
-             delayMicroseconds(CurentSleepingTime);
-             digitalWrite(PulsePin, LOW);
-             delayMicroseconds(CurentSleepingTime);
-         }
-    }
-    
-    // loop at slow speed up to "interation_phase2_slow_motion" to reach end of course
-
-    for (int i = 1; i <= interation_phase2_slow_motion + 1; i++) { 
-        digitalWrite(PulsePin, HIGH);
-        delayMicroseconds(SleepingTimeInitial);
-        digitalWrite(PulsePin, LOW);
-        delayMicroseconds(SleepingTimeInitial);
-        IsLeft=    digitalRead(BlockLeft);
-        IsRight=   digitalRead(BlockRight);
-       
-        if ((Orientation=='L' and IsLeft == HIGH) or 
-           (Orientation=='R' and IsRight == HIGH)) {
-             Serial.print(" Stop Rotation Phase 2");
-             Serial.print(" steps = ");
-             Serial.print(interation_phase1_increasing_speed);
-             Serial.print(" + ");
-             Serial.println(i);
-             break;
-         } else {
-             digitalWrite(PulsePin, HIGH);
-             delayMicroseconds(SleepingTimeInitial);
-             digitalWrite(PulsePin, LOW);
-             delayMicroseconds(SleepingTimeInitial);
-         }
-    }
     Serial.print(" Orientation = ");
     Serial.println(Orientation);
     Serial.print(" IsLeft = ");
