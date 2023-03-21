@@ -13,15 +13,15 @@ int  incomingByte = 0;
 int  PulsePerCycle=1000;
 
 // number of motor steps for each phase
-double nb_steps_phase1 = 21000.0;  // phase 1
-double nb_steps_phase2 =  1250.0;  // phase 2
+double nb_steps_phase1 = 16000.0;  // phase 1
+double nb_steps_phase2 =  6260.0;  // phase 2
 
 // waiting time defines the min and max speed
 double waiting_time_max_speed = 75.0; 
 double waiting_time_min_speed = 250.0; 
 
 int tick_size_phase1 = int((nb_steps_phase1/2)/(waiting_time_min_speed-waiting_time_max_speed));
-int tick_size_phase2 = int((nb_steps_phase2/2)/waiting_time_min_speed);
+int tick_size_phase2 = int((nb_steps_phase2/1.6)/(waiting_time_min_speed-waiting_time_max_speed));
 
 int setOrientationViaSerialMessage(){
 
@@ -136,16 +136,16 @@ void StepMotor() {
     // loop at slow speed up to "nb_steps_phase2" to reach end of course
     Serial.println(" Slow ");
 
-    CurentSleepingTime=waiting_time_max_speed;
+    //CurentSleepingTime=waiting_time_max_speed;
 
     for (int j = 1; j <= int(nb_steps_phase2) + 1; j++) { 
-        CurentSleepingTime=waiting_time_min_speed;
-        //if ((j % tick_size_phase2) == 0) {
-        //     CurentSleepingTime=CurentSleepingTime+1;
-        //}
-        //if (CurentSleepingTime>waiting_time_min_speed) {
-        //     CurentSleepingTime=waiting_time_min_speed;
-        //}
+        //CurentSleepingTime=waiting_time_min_speed;
+        if ((j % tick_size_phase2) == 0) {
+             CurentSleepingTime=CurentSleepingTime+1;
+        }
+        if (CurentSleepingTime>waiting_time_min_speed) {
+             CurentSleepingTime=waiting_time_min_speed;
+        }
 
         IsLeft=    digitalRead(BlockLeft);
         IsRight=   digitalRead(BlockRight);
