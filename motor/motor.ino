@@ -14,7 +14,7 @@ int  PulsePerCycle=1000;
 
 // number of motor steps for each phase
 double nb_steps_phase1 = 16000.0;  // phase 1
-double nb_steps_phase2 =  6260.0;  // phase 2
+double nb_steps_phase2 =  6300.0;  // phase 2
 
 // waiting time defines the min and max speed
 double waiting_time_max_speed = 75.0; 
